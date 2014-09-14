@@ -1,18 +1,16 @@
-package Buffer is
+package buffer_service is
    N: constant Integer := 4;
    subtype Item is Integer;
    type Index is mod N;
    type Item_Array is array(Index) of Item;
 
-   protected type CircularBuffer is
-      -- To be completed
+   task type CircularBuffer is
+    
+      
       entry Write(value : in  Item);
       entry Read(value : out Item);
 
-   private
-      A: Item_Array;
-      In_Ptr, Out_Ptr: Index := 0;
-      Count: Integer range 0..N := 0;
+
    end CircularBuffer;
-end Buffer;
+end buffer_service;
 

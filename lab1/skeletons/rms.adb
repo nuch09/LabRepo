@@ -4,7 +4,7 @@ pragma Priority_Specific_Dispatching(Round_Robin_Within_Priorities, 10, 20);
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Real_Time; use Ada.Real_Time;
 
-procedure PeriodicTasks is
+procedure RMS is
 
    Start : Time;
 
@@ -45,4 +45,4 @@ procedure PeriodicTasks is
 begin
    Start := Clock;
    null;
-end PeriodicTasks;
+end RMS;
