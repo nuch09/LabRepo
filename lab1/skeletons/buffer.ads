@@ -6,6 +6,9 @@ package Buffer is
 
    protected type CircularBuffer is
       -- To be completed
+      entry Write(value : in  Item);
+      entry Read(value : out Item);
+
    private
       A: Item_Array;
       In_Ptr, Out_Ptr: Index := 0;
