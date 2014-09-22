@@ -1,13 +1,8 @@
---pragma Task_Dispatching_Policy(FIFO_Within_Priorities);
-
 with Ada.Text_IO;
 use Ada.Text_IO;
 
 with Ada.Integer_Text_IO;
 use Ada.Integer_Text_IO;
-
---with Ada.Real_Time;
---use Ada.Real_Time;
 
 with readerwriter;
 
@@ -15,38 +10,31 @@ procedure ReaderWriterApp is
 
    N : Integer := 10;
    SharedVariable : Integer := 0;
-   monitor : readerwriter.mon;
-   shmem : readerwriter.wrapper(0);
+   lock : readerwriter.RWLock;
 
-   task type Reader(Id: Integer) is
---      pragma Priority(2);
-   end Reader;
+   task type Reader(Id: Integer);
 
    task body Reader is
       Temp : Integer;
    begin
       for I in 1..N loop
-         monitor.StartRead;
+         lock.StartRead;
          Temp := SharedVariable;
-         -- Temp := shmem.read;
          Put_Line("Reader "&Integer'Image(Id)&" reads " & Integer'Image(Temp));
-         monitor.EndRead;
+         lock.EndRead;
          delay 0.1;
       end loop;
    end Reader;
 
-   task type Writer(Id: Integer) is
---      pragma Priority(3);
-   end Writer;
+   task type Writer(Id: Integer);
 
    task body Writer is
    begin
       for I in 1..N loop
-         monitor.StartWrite;
+         lock.StartWrite;
          SharedVariable := I*Id;
          Put_Line("Writer "&Integer'Image(Id)&" writes " & Integer'Image(SharedVariable));
-         --shmem.write(I*Id);
-         monitor.EndWrite;
+         lock.EndWrite;
          delay 0.1;
       end loop;
    end Writer;

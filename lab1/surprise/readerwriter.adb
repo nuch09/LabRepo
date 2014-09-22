@@ -1,63 +1,34 @@
 
 package body readerwriter is
-        protected body wrapper is 
-                procedure write(nval : in Integer) is
-                begin
-                        value := nval;
-                end write;
-
-                function read return Integer is
-                begin
-                        return value;
-                end read;
-        end wrapper;
-
-        protected body semaphore is
-                entry signal
-                        when value < maximum is
-                begin
-                        value := value + 1;
-                end signal;
-
-                entry wait
-                        when value > 0 is
-                begin
-                        value := value - 1;
-                end wait;
-
-                function free return Boolean is
-                begin
-                        return value = 0;
-                end free;
-        end semaphore;
-
-        protected body mon is
+        protected body RWLock is
                 entry StartRead
+                        -- check for active and waiting writers ('Count is queue length)
                         when not writing and StartWrite'Count = 0 is
                 begin
                         readers := readers + 1;
                 end StartRead;
 
-                ---
+                ----
 
-                entry EndRead when true is
+                procedure EndRead is
                 begin
                         readers := readers - 1;
                 end EndRead;
 
-                ---
+                ----
 
                 entry StartWrite 
+                        -- needs exclusive access
                         when not writing and readers = 0 is
                 begin
                         writing := true;
                 end StartWrite;
 
-                ---
+                ----
 
-                entry EndWrite when true is
+                procedure EndWrite is
                 begin
                         writing := false;
                 end EndWrite;
-        end mon;
+        end RWLock;
 end readerwriter;
