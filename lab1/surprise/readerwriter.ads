@@ -1,5 +1,5 @@
 
-package readwrite is
+package readerwriter is
         protected type semaphore(maximum : Integer; init : integer) is
                 entry signal;
                 entry wait;
@@ -19,4 +19,4 @@ package readwrite is
                         readers : integer := 0;
         end mon;
 
-end readwrite;
+end readerwriter;

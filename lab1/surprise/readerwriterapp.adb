@@ -4,13 +4,13 @@ use Ada.Text_IO;
 with Ada.Integer_Text_IO;
 use Ada.Integer_Text_IO;
 
-with readwrite;
+with readerwriter;
 
 procedure ReaderWriterApp is
 
    N : Integer := 10;
    SharedVariable : Integer := 0;
-   monitor : readwrite.mon;
+   monitor : readerwriter.mon;
 
    task type Reader(Id: Integer);
 

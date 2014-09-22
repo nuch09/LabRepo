@@ -1,5 +1,5 @@
 
-package body readwrite is
+package body readerwriter is
         protected body semaphore is
                 entry signal
                         when value < maximum is
@@ -59,4 +59,4 @@ package body readwrite is
                         wantWrite.signal;
                 end EndWrite;
         end mon;
-end readwrite;
+end readerwriter;
