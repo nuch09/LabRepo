@@ -1,5 +1,11 @@
 
 package readerwriter is
+        protected type wrapper(init : Integer) is
+                procedure write(nval : in Integer);
+                function read return Integer;
+                private
+                        value : Integer := init;
+        end wrapper;
         protected type semaphore(maximum : Integer; init : integer) is
                 entry signal;
                 entry wait;
@@ -10,8 +16,7 @@ package readerwriter is
         protected type mon is
                 entry StartRead;
                 entry EndRead ;
-                procedure StartWrite;
-                entry DoStartWrite;
+                entry StartWrite;
                 entry EndWrite;
                 private
                         wantWrite : semaphore(1, 1);

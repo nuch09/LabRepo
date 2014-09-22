@@ -1,5 +1,17 @@
 
 package body readerwriter is
+        protected body wrapper is 
+                procedure write(nval : in Integer) is
+                begin
+                        value := nval;
+                end write;
+
+                function read return Integer is
+                begin
+                        return value;
+                end read;
+        end wrapper;
+
         protected body semaphore is
                 entry signal
                         when value < maximum is
@@ -21,7 +33,7 @@ package body readerwriter is
 
         protected body mon is
                 entry StartRead
-                        when not writing and wantWrite.free is
+                        when not writing and StartWrite'Count = 0 is
                 begin
                         readers := readers + 1;
                 end StartRead;
@@ -35,28 +47,17 @@ package body readerwriter is
 
                 ---
 
-                procedure StartWrite is
-                begin
-                        wantWrite.wait;
-                        --writing = true;
-                        DoStartWrite;
-                end StartWrite;
-
-                ---
-
-                entry DoStartWrite
+                entry StartWrite 
                         when not writing and readers = 0 is
                 begin
-                        --writing := true;
-                        null;
-                end DoStartWrite;
+                        writing := true;
+                end StartWrite;
 
                 ---
 
                 entry EndWrite when true is
                 begin
-                        --writing := false;
-                        wantWrite.signal;
+                        writing := false;
                 end EndWrite;
         end mon;
 end readerwriter;
