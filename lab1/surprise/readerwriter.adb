@@ -1,3 +1,9 @@
+with Ada.Text_IO;
+use Ada.Text_IO;
+
+with Ada.Integer_Text_IO;
+use Ada.Integer_Text_IO;
+
 
 package body readerwriter is
         protected body RWLock is
@@ -6,6 +12,7 @@ package body readerwriter is
                         when not writing and StartWrite'Count = 0 is
                 begin
                         readers := readers + 1;
+                         Put_Line("Readers+: "& Integer'Image(readers));
                 end StartRead;
 
                 ----
@@ -13,6 +20,7 @@ package body readerwriter is
                 procedure EndRead is
                 begin
                         readers := readers - 1;
+                         Put_Line("Readers-: "& Integer'Image(readers));
                 end EndRead;
 
                 ----
