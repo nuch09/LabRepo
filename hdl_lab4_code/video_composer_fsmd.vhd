@@ -30,7 +30,7 @@ ARCHITECTURE behaviour OF videoComposer_FSMD IS
 
 	CONSTANT ROM : Program_Type := (
 		--| IE  | Dest | Src1 | Src2 | OpAlu | OpShift | OE  |
-		  ('0',	R0,     R0,     R0,     OpXor,  OpPass, 	'0'), -- Reset_State
+		  ('0',	R0,     R0,     R0,     OpXor,  OpPass, '0'), -- Reset_State
 		  ('1',	R1,	Rx,	Rx,     OpXor,  OpPass,	'0'), -- S_Read_Red
 		  ('1',	R2,	R1,	R1,     OpAnd,  OpPass,	'1'), -- S_WriteRed_ReadGreen
 		  ('1',	R3,	R2,	R2,     OpAnd,  OpPass,	'1'), -- S_WriteGreen_ReadBlue
@@ -42,12 +42,14 @@ ARCHITECTURE behaviour OF videoComposer_FSMD IS
                   ('0', R3,     R3,     R3,     OpAnd,  OpRotL, '0'), -- rotL Blue
                   ('0', R6,     R3,     R4,     OpAnd,  OpPass, '0'), -- r6 = Blue(6)
                   ('0', R7,     R5,     R6,     OpOr ,  OpPass, '0'), -- r7 = Blue(6) or Blue(7)
-                  ('0', R1,     R0,     R0,     OpInv,  OpPass, '0'), -- r1 = 0xFF
-                  ('0', R1,     R1,     R7,     OpAdd,  OpPass, '0'), -- r1 = 0xFF + r7 == (B[6] or B[7] ? 0xFF : 0x00)
-                  ('0', R1,     R1,     R1,     OpInv,  OpPass, '0'), -- r1 = inv(r1)
-                  ('0', R3,     R1,     R3,     OpOr ,  OpPass, '0'), -- Blue = r1|r3   == (B[6] or B[7]) ? 0xFF : rotL2(Blue)
 
-		  ('0',	Rx,	R3,	R3,     OpAnd,  OpPass,	'1'), -- S_WriteBlue
+                  ('0', R1,     R0,     R7,     OpSub,  OpPass, '0'), -- r1 = 0x00 - r7
+                  ('0', R3,     R1,     R3,     OpOr ,  OpPass, '1'), -- Write: Blue = r1|r3   == (B[6] or B[7]) ? 0xFF : rotL2(Blue)
+
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
 		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
 		);
 
