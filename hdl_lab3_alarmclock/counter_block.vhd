@@ -18,15 +18,11 @@ begin
     variable COUNT : std_logic_vector(width-1 downto 0);
   begin
     if RESET = '1' then
-      COUNT := (others=>'0');
+		COUNT := (others=>'0');
       compare_match <= '0';
 		counter_value <= (others=>'0');
     elsif clk'event AND clk='1' then
       if EN ='1' then 
-          case UP is
-            when '1' => COUNT:=COUNT+1;
-            when others=> COUNT:=COUNT-1;
-          end case;
           if (UP='1' and COUNT=overflow) then 
             compare_match <= '1';
             COUNT:=(others=>'0');
@@ -34,8 +30,12 @@ begin
             compare_match <= '1';
             COUNT:=overflow;
           else
-            compare_match <= '0';
-          end if;
+				compare_match <= '0';
+				case UP is
+					when '1' => COUNT:=COUNT+1;
+					when others=> COUNT:=COUNT-1;
+				end case;
+			 end if;
       else
         compare_match <= '0';
       end if;

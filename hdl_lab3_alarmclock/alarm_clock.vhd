@@ -53,7 +53,7 @@ Ones_counter: counter_block generic map (4)
     CLK=>ref_clk,
     EN=> compare_match_1Hz,
     RESET=>RESET,
-    overflow=>std_logic_vector(to_unsigned(10,4)), 
+    overflow=>std_logic_vector(to_unsigned(9,4)), 
     compare_match=>compare_match_100mHz, 
     counter_value=>OnesDig);
 Tens_counter: counter_block generic map (4) 
@@ -62,7 +62,7 @@ Tens_counter: counter_block generic map (4)
     CLK=>ref_clk,
     EN=> compare_match_100mHz,
     RESET=>RESET,
-    overflow=>std_logic_vector(to_unsigned(6,4)), 
+    overflow=>std_logic_vector(to_unsigned(5,4)), 
     compare_match=>open, 
     counter_value=>TensDig);
 Decode0 : LEDDecoder 
