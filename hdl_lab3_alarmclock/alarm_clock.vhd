@@ -11,13 +11,19 @@ generic(
 port(
   ref_clk,global_ud,RESET: in std_logic;
   Digit0,Digit1: out std_logic_vector (6 downto 0);
-  BCD0,BCD1: out std_logic_vector (3 downto 0)
+  BCD0,BCD1: inout std_logic_vector (3 downto 0)
   );
 end entity;
 
 
 architecture structural of alarm_clock is
 
+component LEDDecoder is
+	port (
+		binary : in std_logic_vector (3 downto 0);
+		sevenSeg : out std_logic_vector (6 downto 0)
+	);
+end component;
 component counter_block is
   generic(width:integer:=4);
   port ( UP, CLK, EN, RESET : in std_logic; 
@@ -59,7 +65,17 @@ Tens_counter: counter_block generic map (4)
     overflow=>std_logic_vector(to_unsigned(6,4)), 
     compare_match=>open, 
     counter_value=>TensDig);
-
+Decode0 : LEDDecoder 
+	port map (
+		binary => BCD0,
+		sevenSeg => Digit0
+	);
+Decode1 : LEDDecoder 
+	port map (
+		binary => BCD1,
+		sevenSeg => Digit1
+);
 BCD0<=OnesDig;
 BCD1<=TensDig;
+
 end; 

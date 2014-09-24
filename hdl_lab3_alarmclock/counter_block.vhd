@@ -40,7 +40,7 @@ begin
         compare_match <= '0';
       end if;
 	 end if;
-	 counter_value <= COUNT;
+    counter_value <= COUNT;
 end process;
 -----------------------------------------------------
 end; -- Arch_counter_var

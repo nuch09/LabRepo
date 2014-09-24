@@ -10,7 +10,15 @@ port(
   KEY : in std_logic_vector (3 downto 0);
   SW  : in std_logic_vector (17 downto 0);
   LEDR: out std_logic_vector (17 downto 0):=(others => '0');
-  LEDG: out std_logic_vector (7 downto 0):=(others => '0')
+  LEDG: out std_logic_vector (7 downto 0):=(others => '0');
+  HEX0 : out std_logic_vector (6 downto 0);
+  HEX1 : out std_logic_vector (6 downto 0);
+  HEX2 : out std_logic_vector (6 downto 0);
+  HEX3 : out std_logic_vector (6 downto 0);	  
+  HEX4 : out std_logic_vector (6 downto 0);
+  HEX5 : out std_logic_vector (6 downto 0);
+  HEX6 : out std_logic_vector (6 downto 0);
+  HEX7 : out std_logic_vector (6 downto 0)
   );
 end entity;
 
@@ -38,10 +46,16 @@ port map(
   ref_clk=>   clock_50,
   global_ud=> SW(0),
   RESET=>     not(KEY(0)),
-  Digit0=>    open,
-  Digit1=>    open,
-  BCD0=>      LEDG(7 downto 4),
-  BCD1=>      LEDR(3 downto 0)
+  Digit0=>    HEX0,
+  Digit1=>    HEX1,
+  BCD0=>      LEDG(3 downto 0),
+  BCD1=>      LEDG(7 downto 4)
   );
-  
+
+HEX2 <= (others => '1');
+HEX3 <= (others => '1');
+HEX4 <= (others => '1');
+HEX5 <= (others => '1');
+HEX6 <= (others => '1');
+HEX7 <= (others => '1');
 end; 
