@@ -14,7 +14,7 @@ end;
 architecture behavioral of counter_block is
 begin
 -----------------------------------------------------
-  process (CLK, RESET)
+  process (CLK, RESET, UP, EN, overflow)
     variable COUNT : std_logic_vector(width-1 downto 0);
   begin
     if RESET = '1' then
@@ -28,18 +28,25 @@ begin
             when others=> COUNT:=COUNT-1;
           end case;
           if (UP='1' and COUNT=overflow) then 
-            compare_match <= '1';
             COUNT:=(others=>'0');
           elsif (UP='0' and COUNT=0) then
-            compare_match <= '1';
             COUNT:=overflow;
-          else
-            compare_match <= '0';
           end if;
-      else
-        compare_match <= '0';
       end if;
 	 end if;
+
+	 if EN ='1' then 
+		 if (UP='1' and COUNT=overflow) then 
+			compare_match <= '1';
+		 elsif (UP='0' and COUNT=0) then
+			compare_match <= '1';
+		 else
+			compare_match <= '0';
+	 	 end if;
+	 else
+	   compare_match <= '0';
+ 	 end if;
+
     counter_value <= COUNT;
 end process;
 -----------------------------------------------------
