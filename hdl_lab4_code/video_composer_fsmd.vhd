@@ -46,10 +46,10 @@ ARCHITECTURE behaviour OF videoComposer_FSMD IS
                   ('0', R1,     R0,     R7,     OpSub,  OpPass, '0'), -- r1 = 0x00 - r7
                   ('0', R3,     R1,     R3,     OpOr ,  OpPass, '1'), -- Write: Blue = r1|r3   == (B[6] or B[7]) ? 0xFF : rotL2(Blue)
 
-		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
-		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
-		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
-		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0'),  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0'),  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0'),  -- S_Idle
+		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0'),  -- S_Idle
 		  ('0',	Rx,	Rx,	Rx,     OpAnd,  OpPass,	'0')  -- S_Idle
 		);
 
