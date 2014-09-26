@@ -173,6 +173,20 @@ void show_velocity_on_sevenseg(INT8S velocity){
  */
 void show_target_velocity(INT8U target_vel)
 {
+  int tmp = target_vel;
+  int out;
+  INT8U out_high = 0;
+  INT8U out_low = 0;
+
+  out_high = int2seven(tmp / 10);
+  out_low = int2seven(tmp - (tmp/10) * 10);
+  
+  out = int2seven(0) << 21 |
+        int2seven(0) << 14 |
+            out_high << 7  |
+            out_low;
+  IOWR_ALTERA_AVALON_PIO_DATA(DE2_PIO_HEX_HIGH28_BASE,out);
+    
 }
 
 /*
@@ -390,6 +404,7 @@ void ControlTask(void* pdata)
       current_velocity = (INT16S*) msg;
       
       err = OSMboxPost(Mbox_Throttle, (void *) &throttle);
+      show_target_velocity(10);
       OSSemPend(ctrl_timer_semaphore, 0, &err);
       //OSTimeDlyHMSM(0,0,0, CONTROL_PERIOD);
     }
