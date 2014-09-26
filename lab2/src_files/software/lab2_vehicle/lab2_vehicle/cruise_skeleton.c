@@ -146,7 +146,7 @@ int int2seven(int inval){
 /*
  * output current velocity on the seven segement display
  */
-void show_velocity_on_sevenseg(INT8S velocity){
+void show_velocity_on_sevenseg(INT16S velocity){
   int tmp = velocity;
   int out;
   INT8U out_high = 0;
@@ -174,7 +174,7 @@ void show_velocity_on_sevenseg(INT8S velocity){
  * shows the target velocity on the seven segment display (HEX5, HEX4)
  * when the cruise control is activated (0 otherwise)
  */
-void show_target_velocity(INT8U target_vel)
+void show_target_velocity(INT32U target_vel)
 {
   int tmp = target_vel;
   int out;
@@ -407,14 +407,44 @@ void ControlTask(void* pdata)
   INT16S* current_velocity;
 
   printf("Control Task created!\n");
-
+  int cruise_control_guard;
+  int cruise_control_state = 0;
+  int target_velocity;
+  int ctrl_p = 3;
+  int ctrl_i = 100;
+  int ctrl_err = 0;
   while(1)
     {
       msg = OSMboxPend(Mbox_Velocity, CONTROL_PERIOD, &err);
       current_velocity = (INT16S*) msg;
+      cruise_control_guard = top_gear==on && 
+                             *current_velocity >= 200 && 
+                             gas_pedal==off && 
+                             brake_pedal==off;
+      if(cruise_control_guard) {
+        if(cruise_control==on) {
+            cruise_control_state = 1;
+            target_velocity = *current_velocity;
+            led_green |= LED_GREEN_0;
+        }
+      } else {
+        cruise_control_state = 0;
+        led_green &= ~LED_GREEN_0;
+      }
+      
+      if(cruise_control_state) {
+        // P-Controller
+        ctrl_err += (target_velocity - *current_velocity); 
+        throttle = ctrl_p * (target_velocity - *current_velocity) + ctrl_i*ctrl_err/1000;
+      }
+      
+      if(gas_pedal==on) {
+        throttle++;
+      }
       
       err = OSMboxPost(Mbox_Throttle, (void *) &throttle);
-      show_target_velocity(10);
+      show_target_velocity(target_velocity/10);
+      printf("Target Velocity: %d\n", target_velocity);
       OSSemPend(ctrl_timer_semaphore, 0, &err);
       //OSTimeDlyHMSM(0,0,0, CONTROL_PERIOD);
     }
