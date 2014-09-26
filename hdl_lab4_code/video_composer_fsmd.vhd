@@ -30,7 +30,7 @@ ARCHITECTURE behaviour OF videoComposer_FSMD IS
 
 	CONSTANT ROM : Program_Type := (
 		--| IE  | Dest | Src1 | Src2 | OpAlu | OpShift | OE  |
-		  ('0',	R0,     R0,     R0,     OpXor,  OpPass, '0'), -- Reset_State
+		  ('0',	R0,     Rx,     Rx,     OpXor,  OpPass, '0'), -- Reset_State
 		  ('1',	R1,	Rx,	Rx,     OpXor,  OpPass,	'0'), -- S_Read_Red
 		  ('1',	R2,	R1,	R1,     OpAnd,  OpPass,	'1'), -- S_WriteRed_ReadGreen
 		  ('1',	R3,	R2,	R2,     OpAnd,  OpPass,	'1'), -- S_WriteGreen_ReadBlue
@@ -113,14 +113,18 @@ BEGIN
 				next_write_address<=write_address+1;
 				next_WE<='1'; 
 			WHEN S_ReadBlueWriteGreen => -- ROM Instr 3
-				next_WE<='1'; --<='0'; if you add states for processing the blue color
+				next_WE<='0'; --<='0'; if you add states for processing the blue color
 				next_counter <= 4;
-				next_state   <= S_WriteBlue; --S_ProcessBlue;
+				next_state   <= S_ProcessBlue; --S_ProcessBlue;
 				next_read_address<=read_address+1;
 				next_write_address<=write_address+1;
-			-- ...
-			-- states to manage blue color...
-			-- ...
+			when S_ProcessBlue => -- ROM Instr 4 to 10
+			  --next_WE<='0';
+			  next_counter <= current_counter+1;
+			  if(current_counter = 10) then
+			    next_state <= S_WriteBlue;
+			    next_WE <= '1';
+			  end if;
 			WHEN S_WriteBlue  => -- ROM Instr 10 or 11
 				next_WE<='0';
 				next_write_address<=write_address+1;
