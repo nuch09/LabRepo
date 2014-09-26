@@ -24,6 +24,9 @@
 #define LED_RED_0 0x00000001 // Engine
 #define LED_RED_1 0x00000002 // Top Gear
 
+#define LED_RED_17 0x00020000 // Starting Position
+#define LED_RED_TRACK_MASK 0x0003F000   // Mask for all LEDs involved in position 
+
 #define LED_GREEN_0 0x0001 // Cruise Control activated
 #define LED_GREEN_2 0x0002 // Cruise Control Button
 #define LED_GREEN_4 0x0010 // Brake Pedal
@@ -200,6 +203,12 @@ void show_target_velocity(INT8U target_vel)
  */
 void show_position(INT16U position)
 {
+    if(position > 24000) position -= 24000;
+    if(position == 24000) position -= 1;
+    
+    position /= 4000; // scale into interval [0,5]
+    led_red&=~LED_RED_TRACK_MASK;       // reset all track-leds
+    led_red|=LED_RED_17 >> position;    // set the led of the current position
 }
 
 /*
@@ -381,6 +390,7 @@ void VehicleTask(void* pdata)
       printf("Velocity: %4.1fm/s\n", velocity /10.0);
       printf("Throttle: %dV\n", *throttle / 10);
       show_velocity_on_sevenseg((INT8S) (velocity / 10));
+      show_position(position);
     }
 } 
  
