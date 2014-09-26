@@ -38,12 +38,16 @@
 OS_STK StartTask_Stack[TASK_STACKSIZE]; 
 OS_STK ControlTask_Stack[TASK_STACKSIZE]; 
 OS_STK VehicleTask_Stack[TASK_STACKSIZE];
+OS_STK ButtonIOTask_Stack[TASK_STACKSIZE];
+OS_STK SwitchIOTask_Stack[TASK_STACKSIZE];
 
 // Task Priorities
  
 #define STARTTASK_PRIO     5
 #define VEHICLETASK_PRIO  10
 #define CONTROLTASK_PRIO  12
+#define BUTTONIOTASK_PRIO  15
+#define SWITCHIOTASK_PRIO  18
 
 // Task Periods
 
@@ -227,6 +231,85 @@ INT16S adjust_velocity(INT16S velocity, INT8S acceleration,
 }
 
 /*
+ * The task 'ButtonIO' updates the state of cruise_control, gas_pedal and brake_pedal
+ */
+void ButtonIOTask(void *pdata)
+{
+    int buttons;
+    while(1)
+    {
+        buttons=buttons_pressed();
+        if(buttons & GAS_PEDAL_FLAG)
+        {
+            gas_pedal = on;
+            led_green|=LED_GREEN_6;
+        }  
+        else
+        {
+            gas_pedal = off;
+            led_green&=~LED_GREEN_6;
+        }
+        if(buttons & BRAKE_PEDAL_FLAG)
+        {
+            brake_pedal = on;
+            led_green|=LED_GREEN_4;
+        }  
+        else
+        {
+            brake_pedal = off;
+            led_green&=~LED_GREEN_4;
+        }
+        if(buttons & CRUISE_CONTROL_FLAG)
+        {
+            cruise_control = on;
+            led_green|=LED_GREEN_2;
+        }  
+        else
+        {
+            cruise_control = off;
+            led_green&=~LED_GREEN_2;
+        }
+        OSTimeDlyHMSM(0,0,0,20);
+        IOWR_ALTERA_AVALON_PIO_DATA(DE2_PIO_GREENLED9_BASE, led_green);
+    }
+}
+
+/*
+ * The task 'SwitchIO' updates the state of cruise_control, gas_pedal and brake_pedal
+ */
+void SwitchIOTask(void *pdata)
+{
+    int switches;
+    
+    while(1)
+    {
+        switches=switches_pressed();
+        if(switches & TOP_GEAR_FLAG)
+        {
+            top_gear = on;
+            led_red|=LED_RED_1;
+        }
+        else
+        {
+            top_gear = off;;
+            led_red&=~LED_RED_1;
+        }
+        
+        if(switches & ENGINE_FLAG) 
+        {
+            engine = on; 
+            led_red|=LED_RED_0;
+        }
+        else
+        {
+            engine = off; 
+            led_red&=~LED_RED_0;
+        }
+        IOWR_ALTERA_AVALON_PIO_DATA(DE2_PIO_REDLED18_BASE, led_red);
+        OSTimeDlyHMSM(0,0,0,20);
+    }
+}
+/*
  * The task 'VehicleTask' updates the current velocity of the vehicle
  */
 void VehicleTask(void* pdata)
@@ -339,8 +422,8 @@ void StartTask(void* pdata)
           printf("No system clock available!n");
       }
 
-  ctrl_timer_semaphore = OSSemCreate(10);
-  vehicle_timer_semaphore = OSSemCreate(10);
+  ctrl_timer_semaphore = OSSemCreate(0);
+  vehicle_timer_semaphore = OSSemCreate(0);
   /* 
    * Create and start Software Timer 
    */
@@ -411,6 +494,31 @@ void StartTask(void* pdata)
 	   (void *) 0,
 	   OS_TASK_OPT_STK_CHK);
   
+    err = OSTaskCreateExt(
+       ButtonIOTask, // Pointer to task code
+       NULL,        // Pointer to argument that is
+                    // passed to task
+       &ButtonIOTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+                             // of task stack
+       BUTTONIOTASK_PRIO,
+       BUTTONIOTASK_PRIO,
+       (void *)&ButtonIOTask_Stack[0],
+       TASK_STACKSIZE,
+       (void *) 0,
+       OS_TASK_OPT_STK_CHK);
+       
+  err = OSTaskCreateExt(
+       SwitchIOTask, // Pointer to task code
+       NULL,        // Pointer to argument that is
+                    // passed to task
+       &SwitchIOTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+                             // of task stack
+       SWITCHIOTASK_PRIO,
+       SWITCHIOTASK_PRIO,
+       (void *)&SwitchIOTask_Stack[0],
+       TASK_STACKSIZE,
+       (void *) 0,
+       OS_TASK_OPT_STK_CHK);
   printf("All Tasks and Kernel Objects generated!\n");
 
   /* Task deletes itself */
