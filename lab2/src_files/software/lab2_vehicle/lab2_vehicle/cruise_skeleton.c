@@ -43,20 +43,30 @@ OS_STK ControlTask_Stack[TASK_STACKSIZE];
 OS_STK VehicleTask_Stack[TASK_STACKSIZE];
 OS_STK ButtonIOTask_Stack[TASK_STACKSIZE];
 OS_STK SwitchIOTask_Stack[TASK_STACKSIZE];
+OS_STK WatchdogTask_Stack[TASK_STACKSIZE];
+OS_STK OverloadDetectionTask_Stack[TASK_STACKSIZE];
 
 // Task Priorities
- 
-#define STARTTASK_PRIO     5
+
+#define STARTTASK_PRIO     6
 #define VEHICLETASK_PRIO  10
 #define CONTROLTASK_PRIO  12
 #define BUTTONIOTASK_PRIO  15
 #define SWITCHIOTASK_PRIO  18
+//Highest Priority is assigned to watchdog
+//Note 0-4 are reserved for the RTOS kernel
+#define WATCHDOGTASK_PRIO  5
+//The lowest priority is assigned to the overload detection task
+//Note MicroC supports 64 priority levels
+#define OVERLOADDETECTIONTASK_PRIO  63 
 
 // Task Periods
 
 #define CONTROL_PERIOD  300
 #define VEHICLE_PERIOD  300
-
+//Defining a timeout period for the watchdog
+//For 20ms and 300ms periods, the hyper-period would be 300ms
+#define WATCHDOG_TIMEOUT 300
 /*
  * Definition of Kernel Objects 
  */
@@ -68,10 +78,12 @@ OS_EVENT *Mbox_Velocity;
 // Semaphores
 OS_EVENT *ctrl_timer_semaphore;
 OS_EVENT *vehicle_timer_semaphore;
+OS_EVENT *watchdog_semaphore;
 
 // SW-Timer
 OS_TMR *ctrl_timer;
 OS_TMR *vehicle_timer;
+OS_TMR *watchdog_timer;
 
 /*
  * Types
@@ -122,6 +134,16 @@ void vehicle_sw_alarm_handler(void* ptmr, void* callback_arg)
 {
     //sw timer vehicle timeout
     OSSemPost(vehicle_timer_semaphore);
+}
+
+
+void watchdog_sw_alarm_handler(void* ptmr, void* callback_arg)
+{
+    //Printing for debugging purposes
+    printf("Watchdog has timed out\n");
+    
+    //Posting a timeout semaphore for watchdog task
+    OSSemPost(watchdog_semaphore);
 }
 
 static int b2sLUT[] = {0x40, //0
@@ -252,6 +274,37 @@ INT16S adjust_velocity(INT16S velocity, INT8S acceleration,
   }
   
   return new_velocity;
+}
+/*
+ * Watchdog task
+ */
+void WatchdogTask(void *pdata)
+{
+    INT8U err;
+    
+    printf("Watchdog task created!\n");
+    
+    while(1)
+    {
+        OSSemPend(watchdog_semaphore,0,&err);
+        printf("Watchdog warning, system is oveloaded!\n");
+    }
+}
+
+/*
+ * Overload Detection task
+ */
+void OverloaddetectionTask(void *pdata)
+{
+    INT8U err;
+    printf("Overload detection task created!\n");
+    
+    while(1)
+    {
+        printf("Hey, I am the least important thing here :) \n");
+        OSTmrStart(watchdog_timer,&err);
+        OSTimeDlyHMSM(0,0,0,WATCHDOG_TIMEOUT/2);
+    }
 }
 
 /*
@@ -483,6 +536,8 @@ void StartTask(void* pdata)
 
   ctrl_timer_semaphore = OSSemCreate(0);
   vehicle_timer_semaphore = OSSemCreate(0);
+  watchdog_semaphore = OSSemCreate(0);
+  
   /* 
    * Create and start Software Timer 
    */
@@ -503,9 +558,19 @@ void StartTask(void* pdata)
                            (void*)NULL,
                            "VehicleSWTimer",
                            &err);   
+  
+    watchdog_timer = OSTmrCreate(0,   // initial delay
+                           WATCHDOG_TIMEOUT/100, // period
+                           OS_TMR_OPT_PERIODIC,
+                           watchdog_sw_alarm_handler,
+                           (void*)NULL,
+                           "WatchdogSWTimer",
+                           &err);
     
+    //Starting the software timers
     OSTmrStart(ctrl_timer,&err);
     OSTmrStart(vehicle_timer,&err);
+    OSTmrStart(watchdog_timer,&err);
                   
 
   /*
@@ -526,7 +591,7 @@ void StartTask(void* pdata)
    * Creating Tasks in the system 
    */
 
-
+  //Control Task
   err = OSTaskCreateExt(
 	   ControlTask, // Pointer to task code
 	   NULL,        // Pointer to argument that is
@@ -539,7 +604,36 @@ void StartTask(void* pdata)
 	   TASK_STACKSIZE,
 	   (void *) 0,
 	   OS_TASK_OPT_STK_CHK);
-
+  
+  //Watchdog task
+  err = OSTaskCreateExt(
+       WatchdogTask, // Pointer to task code
+       NULL,        // Pointer to argument that is
+                    // passed to task
+       &WatchdogTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+                             // of task stack
+       WATCHDOGTASK_PRIO,
+       WATCHDOGTASK_PRIO,
+       (void *)&WatchdogTask_Stack[0],
+       TASK_STACKSIZE,
+       (void *) 0,
+       OS_TASK_OPT_STK_CHK);
+  
+  //Overload detection task
+  err = OSTaskCreateExt(
+       OverloaddetectionTask, // Pointer to task code
+       NULL,        // Pointer to argument that is
+                    // passed to task
+       &OverloadDetectionTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+                             // of task stack
+       OVERLOADDETECTIONTASK_PRIO,
+       OVERLOADDETECTIONTASK_PRIO,
+       (void *)&OverloadDetectionTask_Stack[0],
+       TASK_STACKSIZE,
+       (void *) 0,
+       OS_TASK_OPT_STK_CHK);
+  
+  //Vehicle task
   err = OSTaskCreateExt(
 	   VehicleTask, // Pointer to task code
 	   NULL,        // Pointer to argument that is
@@ -553,6 +647,7 @@ void StartTask(void* pdata)
 	   (void *) 0,
 	   OS_TASK_OPT_STK_CHK);
   
+  //Button IO Task
     err = OSTaskCreateExt(
        ButtonIOTask, // Pointer to task code
        NULL,        // Pointer to argument that is
