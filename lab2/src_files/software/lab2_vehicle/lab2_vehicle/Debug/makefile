@@ -10,7 +10,7 @@
 # ********************************************************************** 
  
 # These flags can be set from C/C++ build property page -> nios2-elf-gcc -> General
-CFLAGS = -DALT_DEBUG -O0 -g -Wall
+CFLAGS = -DALT_DEBUG -Os -g -Wall
 
 ASFLAGS = -g
 

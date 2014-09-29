@@ -39,14 +39,24 @@
 
 #define TASK_STACKSIZE 2048
 
-OS_STK StartTask_Stack[TASK_STACKSIZE]; 
-OS_STK ControlTask_Stack[TASK_STACKSIZE]; 
-OS_STK VehicleTask_Stack[TASK_STACKSIZE];
-OS_STK ButtonIOTask_Stack[TASK_STACKSIZE];
-OS_STK SwitchIOTask_Stack[TASK_STACKSIZE];
-OS_STK WatchdogTask_Stack[TASK_STACKSIZE];
-OS_STK OverloadDetectionTask_Stack[TASK_STACKSIZE];
-OS_STK ExtraLoadTask_Stack[TASK_STACKSIZE];
+#define START_TASK_STACKSIZE    2048 
+#define CONTROL_TASK_STACKSIZE  2048
+#define VEHICLE_TASK_STACKSIZE  2048
+#define BUTTON_TASK_STACKSIZE    512
+#define SWITCH_TASK_STACKSIZE    512
+#define WATCHDOG_TASK_STACKSIZE  512
+#define OVERLOAD_TASK_STACKSIZE 2048
+#define EXTRA_TASK_STACKSIZE     512
+
+
+OS_STK StartTask_Stack[START_TASK_STACKSIZE]; 
+OS_STK ControlTask_Stack[CONTROL_TASK_STACKSIZE]; 
+OS_STK VehicleTask_Stack[VEHICLE_TASK_STACKSIZE];
+OS_STK ButtonIOTask_Stack[BUTTON_TASK_STACKSIZE];
+OS_STK SwitchIOTask_Stack[SWITCH_TASK_STACKSIZE];
+OS_STK WatchdogTask_Stack[WATCHDOG_TASK_STACKSIZE];
+OS_STK OverloadDetectionTask_Stack[OVERLOAD_TASK_STACKSIZE];
+OS_STK ExtraLoadTask_Stack[EXTRA_TASK_STACKSIZE];
 
 // Task Priorities
 
@@ -319,13 +329,30 @@ void OverloaddetectionTask(void *pdata)
 {
     INT8U err;
     printf("Overload detection task created!\n");
-    
+    OS_STK_DATA stackdata;
     while(1)
     {
         printf("Hey, I am the least important thing here :) \n");
         OSTmrStart(watchdog_timer,&err);
         OSTimeDlyHMSM(0,0,0,WATCHDOG_TIMEOUT/4);
+        /*
+        OSTaskStkChk(VEHICLETASK_PRIO, &stackdata);
+        printf("Vehicle Stack: %u\n",stackdata.OSUsed);
+        OSTaskStkChk(CONTROLTASK_PRIO, &stackdata);
+        printf("Control Stack: %u\n",stackdata.OSUsed);
+        OSTaskStkChk(BUTTONIOTASK_PRIO, &stackdata);
+        printf("Button Stack: %u\n",stackdata.OSUsed);
+        OSTaskStkChk(SWITCHIOTASK_PRIO, &stackdata);
+        printf("Switch Stack: %u\n",stackdata.OSUsed);
+        OSTaskStkChk(WATCHDOGTASK_PRIO, &stackdata);
+        printf("Watchdog Stack: %u\n",stackdata.OSUsed);
+        OSTaskStkChk(STARTTASK_PRIO, &stackdata);
+        printf("StartTask Stack: %u\n",stackdata.OSUsed);
+        OSTaskStkChk(EXTRALOADTASK_PRIO, &stackdata);
+        printf("ExtraLoad Stack: %u\n",stackdata.OSUsed);
+        */
     }
+    
 }
 
 void ExtraLoadTask(void *pdata) {
@@ -646,97 +673,97 @@ void StartTask(void* pdata)
 	   ControlTask, // Pointer to task code
 	   NULL,        // Pointer to argument that is
 	                // passed to task
-	   &ControlTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+	   &ControlTask_Stack[CONTROL_TASK_STACKSIZE-1], // Pointer to top
 							 // of task stack
 	   CONTROLTASK_PRIO,
 	   CONTROLTASK_PRIO,
 	   (void *)&ControlTask_Stack[0],
-	   TASK_STACKSIZE,
+	   CONTROL_TASK_STACKSIZE,
 	   (void *) 0,
-	   OS_TASK_OPT_STK_CHK);
+	   OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
   
   //Watchdog task
   err = OSTaskCreateExt(
        WatchdogTask, // Pointer to task code
        NULL,        // Pointer to argument that is
                     // passed to task
-       &WatchdogTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+       &WatchdogTask_Stack[WATCHDOG_TASK_STACKSIZE-1], // Pointer to top
                              // of task stack
        WATCHDOGTASK_PRIO,
        WATCHDOGTASK_PRIO,
        (void *)&WatchdogTask_Stack[0],
-       TASK_STACKSIZE,
+       WATCHDOG_TASK_STACKSIZE,
        (void *) 0,
-       OS_TASK_OPT_STK_CHK);
+       OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
   
   //Overload detection task
   err = OSTaskCreateExt(
        OverloaddetectionTask, // Pointer to task code
        NULL,        // Pointer to argument that is
                     // passed to task
-       &OverloadDetectionTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+       &OverloadDetectionTask_Stack[OVERLOAD_TASK_STACKSIZE-1], // Pointer to top
                              // of task stack
        OVERLOADDETECTIONTASK_PRIO,
        OVERLOADDETECTIONTASK_PRIO,
        (void *)&OverloadDetectionTask_Stack[0],
-       TASK_STACKSIZE,
+       OVERLOAD_TASK_STACKSIZE,
        (void *) 0,
-       OS_TASK_OPT_STK_CHK);
+       OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 
   //ExtraLoad task
   err = OSTaskCreateExt(
        ExtraLoadTask, // Pointer to task code
        NULL,        // Pointer to argument that is
                     // passed to task
-       &ExtraLoadTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+       &ExtraLoadTask_Stack[EXTRA_TASK_STACKSIZE-1], // Pointer to top
                              // of task stack
        EXTRALOADTASK_PRIO,
        EXTRALOADTASK_PRIO,
        (void *)&ExtraLoadTask_Stack[0],
-       TASK_STACKSIZE,
+       EXTRA_TASK_STACKSIZE,
        (void *) 0,
-       OS_TASK_OPT_STK_CHK);
+       OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
   
   //Vehicle task
   err = OSTaskCreateExt(
 	   VehicleTask, // Pointer to task code
 	   NULL,        // Pointer to argument that is
 	                // passed to task
-	   &VehicleTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+	   &VehicleTask_Stack[VEHICLE_TASK_STACKSIZE-1], // Pointer to top
 							 // of task stack
 	   VEHICLETASK_PRIO,
 	   VEHICLETASK_PRIO,
 	   (void *)&VehicleTask_Stack[0],
-	   TASK_STACKSIZE,
+	   VEHICLE_TASK_STACKSIZE,
 	   (void *) 0,
-	   OS_TASK_OPT_STK_CHK);
+	   OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
   
   //Button IO Task
     err = OSTaskCreateExt(
        ButtonIOTask, // Pointer to task code
        NULL,        // Pointer to argument that is
                     // passed to task
-       &ButtonIOTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+       &ButtonIOTask_Stack[BUTTON_TASK_STACKSIZE-1], // Pointer to top
                              // of task stack
        BUTTONIOTASK_PRIO,
        BUTTONIOTASK_PRIO,
        (void *)&ButtonIOTask_Stack[0],
-       TASK_STACKSIZE,
+       BUTTON_TASK_STACKSIZE,
        (void *) 0,
-       OS_TASK_OPT_STK_CHK);
+       OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
        
   err = OSTaskCreateExt(
        SwitchIOTask, // Pointer to task code
        NULL,        // Pointer to argument that is
                     // passed to task
-       &SwitchIOTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+       &SwitchIOTask_Stack[SWITCH_TASK_STACKSIZE-1], // Pointer to top
                              // of task stack
        SWITCHIOTASK_PRIO,
        SWITCHIOTASK_PRIO,
        (void *)&SwitchIOTask_Stack[0],
-       TASK_STACKSIZE,
+       SWITCH_TASK_STACKSIZE,
        (void *) 0,
-       OS_TASK_OPT_STK_CHK);
+       OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
   printf("All Tasks and Kernel Objects generated!\n");
 
   /* Task deletes itself */
@@ -759,12 +786,12 @@ int main(void) {
 	 StartTask, // Pointer to task code
          NULL,      // Pointer to argument that is
                     // passed to task
-         (void *)&StartTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+         (void *)&StartTask_Stack[START_TASK_STACKSIZE-1], // Pointer to top
 						     // of task stack 
          STARTTASK_PRIO,
          STARTTASK_PRIO,
          (void *)&StartTask_Stack[0],
-         TASK_STACKSIZE,
+         START_TASK_STACKSIZE,
          (void *) 0,  
          OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
          
