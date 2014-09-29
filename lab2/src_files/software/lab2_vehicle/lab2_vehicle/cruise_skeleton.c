@@ -90,6 +90,7 @@ enum active cruise_control = off;
 int delay; // Delay of HW-timer 
 INT16U led_green = 0; // Green LEDs
 INT32U led_red = 0;   // Red LEDs
+volatile INT32S global_velocity = 0;
 
 int buttons_pressed(void)
 {
@@ -325,8 +326,10 @@ void SwitchIOTask(void *pdata)
         }
         else
         {
-            engine = off; 
-            led_red&=~LED_RED_0;
+            if(global_velocity == 0) {
+                engine = off; 
+                led_red&=~LED_RED_0;
+            }
         }
         IOWR_ALTERA_AVALON_PIO_DATA(DE2_PIO_REDLED18_BASE, led_red);
         OSTimeDlyHMSM(0,0,0,20);
@@ -417,6 +420,7 @@ void ControlTask(void* pdata)
     {
       msg = OSMboxPend(Mbox_Velocity, CONTROL_PERIOD, &err);
       current_velocity = (INT16S*) msg;
+      global_velocity = *current_velocity;
       cruise_control_guard = top_gear==on && 
                              *current_velocity >= 200 && 
                              gas_pedal==off && 
@@ -433,7 +437,7 @@ void ControlTask(void* pdata)
       }
       
       if(cruise_control_state) {
-        // P-Controller
+        // PI-Controller
         ctrl_err += (target_velocity - *current_velocity); 
         throttle = ctrl_p * (target_velocity - *current_velocity) + ctrl_i*ctrl_err/1000;
       }
