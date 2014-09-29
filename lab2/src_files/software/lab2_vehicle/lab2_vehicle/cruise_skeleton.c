@@ -10,12 +10,11 @@
 #define HW_TIMER_PERIOD 100 /* 100ms */
 
 /* Button Patterns */
-
 #define GAS_PEDAL_FLAG      0x08
 #define BRAKE_PEDAL_FLAG    0x04
 #define CRUISE_CONTROL_FLAG 0x02
-/* Switch Patterns */
 
+/* Switch Patterns */
 #define TOP_GEAR_FLAG       0x00000002
 #define ENGINE_FLAG         0x00000001
 
@@ -30,7 +29,9 @@
 #define LED_GREEN_0 0x0001 // Cruise Control activated
 #define LED_GREEN_2 0x0002 // Cruise Control Button
 #define LED_GREEN_4 0x0010 // Brake Pedal
+#define LED_GREEN_5 0x0020 // Debug stuff
 #define LED_GREEN_6 0x0040 // Gas Pedal
+#define LED_GREEN_7 0x0080 // Debug purposes
 
 /*
  * Definition of Tasks
@@ -45,20 +46,22 @@ OS_STK ButtonIOTask_Stack[TASK_STACKSIZE];
 OS_STK SwitchIOTask_Stack[TASK_STACKSIZE];
 OS_STK WatchdogTask_Stack[TASK_STACKSIZE];
 OS_STK OverloadDetectionTask_Stack[TASK_STACKSIZE];
+OS_STK ExtraLoadTask_Stack[TASK_STACKSIZE];
 
 // Task Priorities
 
-#define STARTTASK_PRIO     6
-#define VEHICLETASK_PRIO  10
-#define CONTROLTASK_PRIO  12
-#define BUTTONIOTASK_PRIO  15
-#define SWITCHIOTASK_PRIO  18
 //Highest Priority is assigned to watchdog
 //Note 0-4 are reserved for the RTOS kernel
-#define WATCHDOGTASK_PRIO  5
+#define WATCHDOGTASK_PRIO    5
+#define STARTTASK_PRIO       6
+#define VEHICLETASK_PRIO    10
+#define CONTROLTASK_PRIO    12
+#define BUTTONIOTASK_PRIO   15
+#define SWITCHIOTASK_PRIO   18
+#define EXTRALOADTASK_PRIO  22
 //The lowest priority is assigned to the overload detection task
 //Note MicroC supports 64 priority levels
-#define OVERLOADDETECTIONTASK_PRIO  63 
+#define OVERLOADDETECTIONTASK_PRIO  27
 
 // Task Periods
 
@@ -66,7 +69,8 @@ OS_STK OverloadDetectionTask_Stack[TASK_STACKSIZE];
 #define VEHICLE_PERIOD  300
 //Defining a timeout period for the watchdog
 //For 20ms and 300ms periods, the hyper-period would be 300ms
-#define WATCHDOG_TIMEOUT 300
+#define WATCHDOG_TIMEOUT 600
+#define IO_SCAN_PERIOD 100
 /*
  * Definition of Kernel Objects 
  */
@@ -84,6 +88,7 @@ OS_EVENT *watchdog_semaphore;
 OS_TMR *ctrl_timer;
 OS_TMR *vehicle_timer;
 OS_TMR *watchdog_timer;
+OS_TMR *onehz_timer;
 
 /*
  * Types
@@ -119,9 +124,26 @@ int switches_pressed(void)
  */
 alt_u32 alarm_handler(void* context)
 {
+  static int i = 0;
+  if(DEBUG) {
+      if(i==9) {
+        led_green^=LED_GREEN_5;
+        i = 0;
+      } else {
+        i++;
+      }
+  }
   OSTmrSignal(); /* Signals a 'tick' to the SW timers */
   
   return delay;
+}
+
+void One_Hz_alarm_handler(void* ptmr, void* callback_arg)
+{
+    //Toggle LED Green 7
+    if(DEBUG) {
+       led_green^=LED_GREEN_7;
+    }
 }
 
 void control_sw_alarm_handler(void* ptmr, void* callback_arg)
@@ -140,8 +162,7 @@ void vehicle_sw_alarm_handler(void* ptmr, void* callback_arg)
 void watchdog_sw_alarm_handler(void* ptmr, void* callback_arg)
 {
     //Printing for debugging purposes
-    printf("Watchdog has timed out\n");
-    
+    printf("Watchdog has timed out");
     //Posting a timeout semaphore for watchdog task
     OSSemPost(watchdog_semaphore);
 }
@@ -303,7 +324,23 @@ void OverloaddetectionTask(void *pdata)
     {
         printf("Hey, I am the least important thing here :) \n");
         OSTmrStart(watchdog_timer,&err);
-        OSTimeDlyHMSM(0,0,0,WATCHDOG_TIMEOUT/2);
+        OSTimeDlyHMSM(0,0,0,WATCHDOG_TIMEOUT/4);
+    }
+}
+
+void ExtraLoadTask(void *pdata) {
+    int switches, load_value, start, end;
+    while(1) {
+        switches = switches_pressed();
+        
+        // take sw9 downto sw4 as integer in 2% steps
+        load_value = ((switches>>4)&0x3F)*2;
+        if(load_value > 100) load_value = 100;
+        
+        start = OSTimeGet(); // start timer [tick]
+        end = start + load_value;
+        while(OSTimeGet()<end);
+        OSTimeDly(100-load_value);
     }
 }
 
@@ -346,7 +383,7 @@ void ButtonIOTask(void *pdata)
             cruise_control = off;
             led_green&=~LED_GREEN_2;
         }
-        OSTimeDlyHMSM(0,0,0,20);
+        OSTimeDlyHMSM(0,0,0,IO_SCAN_PERIOD);
         IOWR_ALTERA_AVALON_PIO_DATA(DE2_PIO_GREENLED9_BASE, led_green);
     }
 }
@@ -385,7 +422,7 @@ void SwitchIOTask(void *pdata)
             }
         }
         IOWR_ALTERA_AVALON_PIO_DATA(DE2_PIO_REDLED18_BASE, led_red);
-        OSTimeDlyHMSM(0,0,0,20);
+        OSTimeDlyHMSM(0,0,0,IO_SCAN_PERIOD);
     }
 }
 /*
@@ -465,7 +502,7 @@ void ControlTask(void* pdata)
   printf("Control Task created!\n");
   int cruise_control_guard;
   int cruise_control_state = 0;
-  int target_velocity;
+  int target_velocity=0;
   int ctrl_p = 3;
   int ctrl_i = 100;
   int ctrl_err = 0;
@@ -543,7 +580,8 @@ void StartTask(void* pdata)
    */
    
   ctrl_timer = OSTmrCreate(0,   // initial delay
-                           CONTROL_PERIOD/100, // period
+                            //Convert period [ms] to timer ticks
+                           CONTROL_PERIOD/HW_TIMER_PERIOD, // period
                            OS_TMR_OPT_PERIODIC,
                            control_sw_alarm_handler,
                            (void*)NULL,
@@ -552,7 +590,8 @@ void StartTask(void* pdata)
                            
    
     vehicle_timer = OSTmrCreate(0,   // initial delay
-                           VEHICLE_PERIOD/100, // period
+                            //Convert period [ms] to timer ticks
+                           VEHICLE_PERIOD/HW_TIMER_PERIOD, // period
                            OS_TMR_OPT_PERIODIC,
                            vehicle_sw_alarm_handler,
                            (void*)NULL,
@@ -560,17 +599,28 @@ void StartTask(void* pdata)
                            &err);   
   
     watchdog_timer = OSTmrCreate(0,   // initial delay
-                           WATCHDOG_TIMEOUT/100, // period
+                            //Convert period [ms] to timer ticks
+                           WATCHDOG_TIMEOUT/HW_TIMER_PERIOD, // period
                            OS_TMR_OPT_PERIODIC,
                            watchdog_sw_alarm_handler,
                            (void*)NULL,
                            "WatchdogSWTimer",
+                           &err);
+  
+    onehz_timer = OSTmrCreate(0,   // initial delay
+                            //Convert period [ms] to timer ticks
+                           1000/HW_TIMER_PERIOD, // period
+                           OS_TMR_OPT_PERIODIC,
+                           One_Hz_alarm_handler,
+                           (void*)NULL,
+                           "Debugging Timer",
                            &err);
     
     //Starting the software timers
     OSTmrStart(ctrl_timer,&err);
     OSTmrStart(vehicle_timer,&err);
     OSTmrStart(watchdog_timer,&err);
+    OSTmrStart(onehz_timer,&err);
                   
 
   /*
@@ -629,6 +679,20 @@ void StartTask(void* pdata)
        OVERLOADDETECTIONTASK_PRIO,
        OVERLOADDETECTIONTASK_PRIO,
        (void *)&OverloadDetectionTask_Stack[0],
+       TASK_STACKSIZE,
+       (void *) 0,
+       OS_TASK_OPT_STK_CHK);
+
+  //ExtraLoad task
+  err = OSTaskCreateExt(
+       ExtraLoadTask, // Pointer to task code
+       NULL,        // Pointer to argument that is
+                    // passed to task
+       &ExtraLoadTask_Stack[TASK_STACKSIZE-1], // Pointer to top
+                             // of task stack
+       EXTRALOADTASK_PRIO,
+       EXTRALOADTASK_PRIO,
+       (void *)&ExtraLoadTask_Stack[0],
        TASK_STACKSIZE,
        (void *) 0,
        OS_TASK_OPT_STK_CHK);
